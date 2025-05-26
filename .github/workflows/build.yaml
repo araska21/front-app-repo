@@ -4,12 +4,17 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Check Node v
         run: node -v
@@ -30,12 +35,27 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Get image tag(verion)
-        id: image
+      - name: Generate and push next version tag
+        id: version
         run: |
-          VERSION=$(echo ${{ github.sha }} | cut -c1-8)
-          echo VERSION=$VERSION
-          echo "::set-output name=version::$VERSION"
+          git fetch --tags
+          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+          if [[ -z "$LATEST_TAG" ]]; then
+            NEXT_VERSION="1.0"
+          else
+            MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+            NEXT_VERSION="$((MAJOR + 1)).0"
+          fi
+
+          echo "NEXT_VERSION=$NEXT_VERSION"
+          git tag "$NEXT_VERSION"
+          git push origin "$NEXT_VERSION"
+
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Use the version
+        run: echo "New version is ${{ steps.version.outputs.version }}"
 
       - name: Build, tag, and push image to Amazon ECR
         id: image-info
