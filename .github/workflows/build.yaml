@@ -79,7 +79,7 @@ jobs:
 
       - name: Push image to Amazon ECR
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry}}/${{ steps.image-info.outputs.ecr_repository }}:${{ steps.image-info.outputs.image_tag }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/demo-frontend:${{ steps.version.outputs.version }}
 
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v1
@@ -94,11 +94,8 @@ jobs:
 
       - name: Update Kubernetes resources
         run: |
-          echo ${{ steps.login-ecr.outputs.registry }}
-          echo ${{ steps.image-info.outputs.ecr_repository }}
-          echo ${{ steps.image-info.outputs.image_tag }}
           cd k8s-manifest-repo/overlays/dev/
-          kustomize edit set image ${{ steps.login-ecr.outputs.registry}}/${{ steps.image-info.outputs.ecr_repository }}=${{ steps.login-ecr.outputs.registry}}/${{ steps.image-info.outputs.ecr_repository }}:${{ steps.image-info.outputs.image_tag }}
+          kustomize edit set image ${{ steps.login-ecr.outputs.registry }}/demo-frontend=${{ steps.login-ecr.outputs.registry }}/demo-frontend:${{ steps.version.outputs.version }}
           cat kustomization.yaml
 
       - name: Commit files
